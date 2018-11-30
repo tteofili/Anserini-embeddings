@@ -40,10 +40,10 @@ import java.util.List;
 
 /**
  * Example illustrating how to look up word vectors. Note that terms are processed with a Lucene Analyzer, which means
- * that a query term may match multiple entries in the original GloVe work embeddings. It's up to the client to figure
+ * that a query term may match multiple entries in the original word embeddings. It's up to the client to figure
  * out how to deal with this issue.
  */
-public class LookupGloVe {
+public class LookupWordEmbeddings {
   public static final class Args {
     @Option(name = "-word", metaVar = "[word]", required = true, usage = "word to look up")
     public String word;
@@ -61,7 +61,7 @@ public class LookupGloVe {
     } catch (CmdLineException e) {
       System.err.println(e.getMessage());
       parser.printUsage(System.err);
-      System.err.println("Example: "+ LookupGloVe.class.getSimpleName() +
+      System.err.println("Example: "+ LookupWordEmbeddings.class.getSimpleName() +
           parser.printExample(OptionHandlerFilter.REQUIRED));
       return;
     }
@@ -76,7 +76,7 @@ public class LookupGloVe {
       System.exit(-1);
     }
 
-    TermQuery query = new TermQuery(new Term(IndexGloVe.FIELD_WORD, qtokens.get(0)));
+    TermQuery query = new TermQuery(new Term(IndexWordEmbeddings.FIELD_WORD, qtokens.get(0)));
 
     TopDocs topDocs = searcher.search(query, Integer.MAX_VALUE);
     if (topDocs.totalHits == 0) {
@@ -87,8 +87,8 @@ public class LookupGloVe {
 
     for ( int i=0; i<topDocs.scoreDocs.length; i++ ) {
       Document doc = reader.document(topDocs.scoreDocs[i].doc);
-      List<String> tokens = AnalyzerUtils.tokenize(new SimpleAnalyzer(), doc.getField(IndexGloVe.FIELD_WORD).stringValue());
-      byte[] value = doc.getField(IndexGloVe.FIELD_VECTOR).binaryValue().bytes;
+      List<String> tokens = AnalyzerUtils.tokenize(new SimpleAnalyzer(), doc.getField(IndexWordEmbeddings.FIELD_WORD).stringValue());
+      byte[] value = doc.getField(IndexWordEmbeddings.FIELD_VECTOR).binaryValue().bytes;
       DataInputStream in = new DataInputStream(new ByteArrayInputStream(value));
 
       int cnt = in.readInt();
@@ -97,7 +97,7 @@ public class LookupGloVe {
         vector[n] = in.readFloat();
       }
 
-      System.out.println(String.format("%s %d [%f, %f, %f, %f ... ]", doc.getField(IndexGloVe.FIELD_WORD).stringValue(),
+      System.out.println(String.format("%s %d [%f, %f, %f, %f ... ]", doc.getField(IndexWordEmbeddings.FIELD_WORD).stringValue(),
           tokens.size(), vector[0], vector[1], vector[2], vector[3]));
     }
   }
