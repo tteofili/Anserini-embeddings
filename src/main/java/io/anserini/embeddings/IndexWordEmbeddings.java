@@ -46,10 +46,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Takes GloVe word embeddings and creates a Lucene index for lookup. This is treating Lucene as a simple key-value store.
+ * Takes word embeddings and creates a Lucene index for lookup. This is treating Lucene as a simple key-value store.
  */
-public class IndexGloVe {
-  private static final Logger LOG = LogManager.getLogger(IndexGloVe.class);
+public class IndexWordEmbeddings {
+  private static final Logger LOG = LogManager.getLogger(IndexWordEmbeddings.class);
 
   public static final class Args {
     @Option(name = "-input", metaVar = "[file]", required = true, usage = "GloVe data")
@@ -71,14 +71,14 @@ public class IndexGloVe {
     } catch (CmdLineException e) {
       System.err.println(e.getMessage());
       parser.printUsage(System.err);
-      System.err.println("Example: "+ IndexGloVe.class.getSimpleName() +
+      System.err.println("Example: "+ IndexWordEmbeddings.class.getSimpleName() +
           parser.printExample(OptionHandlerFilter.REQUIRED));
       return;
     }
 
     long startTime = System.currentTimeMillis();
     LOG.info("Loading GloVe vectors...");
-    WordVectors wordVectors = WordVectorSerializer.loadTxtVectors(indexArgs.input);
+    WordVectors wordVectors = WordVectorSerializer.loadStaticModel(indexArgs.input);
     LOG.info("Completed in " + (System.currentTimeMillis()-startTime)/1000 + "s elapsed.");
 
     final long start = System.nanoTime();
@@ -102,8 +102,8 @@ public class IndexGloVe {
       try {
         DataOutputStream dataOut = new DataOutputStream(bytesOut);
         dataOut.writeInt(vector.length);
-        for (int i = 0; i < vector.length; i++) {
-          dataOut.writeFloat((float) vector[i]);
+        for (double v : vector) {
+          dataOut.writeFloat((float) v);
         }
         dataOut.close();
       } catch (IOException e) {

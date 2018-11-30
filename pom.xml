@@ -94,12 +94,12 @@
           <extraJvmArguments>-Xms512M -Xmx256G</extraJvmArguments>
           <programs>
             <program>
-              <mainClass>io.anserini.embeddings.IndexGloVe</mainClass>
-              <id>IndexGloVe</id>
+              <mainClass>io.anserini.embeddings.IndexWordEmbeddings</mainClass>
+              <id>IndexWordEmbeddings</id>
             </program>
             <program>
-              <mainClass>io.anserini.embeddings.LookupGloVe</mainClass>
-              <id>LookupGloVe</id>
+              <mainClass>io.anserini.embeddings.LookupWordEmbeddings</mainClass>
+              <id>LookupWordEmbeddings</id>
             </program>
           </programs>
         </configuration>
