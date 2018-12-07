@@ -98,8 +98,16 @@
               <id>IndexWordEmbeddings</id>
             </program>
             <program>
+              <mainClass>io.anserini.embeddings.IndexReducedWordEmbeddings</mainClass>
+              <id>IndexReducedWordEmbeddings</id>
+            </program>
+            <program>
               <mainClass>io.anserini.embeddings.LookupWordEmbeddings</mainClass>
               <id>LookupWordEmbeddings</id>
+            </program>
+            <program>
+              <mainClass>io.anserini.embeddings.NearestNeighbour</mainClass>
+              <id>NearestNeighbour</id>
             </program>
           </programs>
         </configuration>
@@ -194,9 +202,19 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>1.7.25</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-sandbox</artifactId>
+      <version>7.5.0</version>
+    </dependency>
+    <dependency>
       <groupId>io.anserini</groupId>
       <artifactId>anserini</artifactId>
-      <version>0.2.0</version>
+      <version>0.2.1-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.deeplearning4j</groupId>

@@ -15,3 +15,24 @@ Simple lookup example:
 ```
 $ target/appassembler/bin/LookupWordEmbeddings -index glove -word "happy"
 ```
+
+Nearest neighbour search
+========================
+
+Index dimensionality reduced word embeddings as Lucene `FloatPoints`. 
+Number of dimensions allowed is between 1 and 8.
+
+```
+$ target/appassembler/bin/IndexReducedWordEmbeddings -index glove -input glove.840B.300d.txt -dimensions 8
+```
+
+Simple nearest neighbour example:
+
+```
+$ target/appassembler/bin/NearestNeighbour -index glove -word "thomas"
+thomas
+vincent
+lewis
+fred
+williams
+```
