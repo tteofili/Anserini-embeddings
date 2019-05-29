@@ -47,13 +47,13 @@ public class IndexReducedWordEmbeddings {
   private static final Logger LOG = LogManager.getLogger(IndexReducedWordEmbeddings.class);
 
   public static final class Args {
-    @Option(name = "-input", metaVar = "[file]", required = true, usage = "GloVe data")
+    @Option(name = "-input", metaVar = "[file]", required = true, usage = "word vectors data")
     public File input;
 
     @Option(name = "-index", metaVar = "[path]", required = true, usage = "index path")
     public Path index;
 
-    @Option(name = "-dimensions", metaVar = "[int]", required = false, usage = "dimensions")
+    @Option(name = "-dimensions", metaVar = "[int]", required = true, usage = "dimensions")
     public int dimensions;
   }
 
@@ -98,7 +98,7 @@ public class IndexReducedWordEmbeddings {
     INDArray weights = wordVectors.lookupTable().getWeights();
     INDArray reduced = PCA.pca(weights, dimensions, true);
 
-    LOG.info("Completed in " + (System.currentTimeMillis()-startTime)/1000 + "s elapsed.");
+    LOG.info("Completed in " + (System.currentTimeMillis()-startTime)/1000 + "s.");
 
     for (int i = 0; i < reduced.rows(); i++) {
       Document doc = new Document();
