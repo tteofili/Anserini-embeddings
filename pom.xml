@@ -33,7 +33,7 @@
   </developers>
 
   <properties>
-    <LUCENE_VERSION>6.3.0</LUCENE_VERSION>
+    <LUCENE_VERSION>8.0.0</LUCENE_VERSION>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -213,12 +213,12 @@
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-sandbox</artifactId>
-      <version>7.5.0</version>
+      <version>${LUCENE_VERSION}</version>
     </dependency>
     <dependency>
       <groupId>io.anserini</groupId>
       <artifactId>anserini</artifactId>
-      <version>0.2.1-SNAPSHOT</version>
+      <version>0.6.0</version>
     </dependency>
     <dependency>
       <groupId>org.deeplearning4j</groupId>
