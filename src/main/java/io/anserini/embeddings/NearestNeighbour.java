@@ -71,7 +71,7 @@ public class NearestNeighbour {
     TermQuery query = new TermQuery(new Term(IndexWordEmbeddings.FIELD_WORD, qtokens.get(0)));
 
     TopDocs topDocs = searcher.search(query, 1);
-    if (topDocs.totalHits == 0) {
+    if (topDocs.totalHits.value == 0) {
       System.err.println("Error: term not found!");
       System.exit(-1);
     }
