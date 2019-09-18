@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Takes an existing input index containing text documents and a word embeddings index and generates
  * a new index for document embeddings lookup (and nearest neighbour search), by averaging word embeddings of each term
- * in a given field in a ocument, as one of the approaches outlined in the paper "Document Embedding with Paragraph Vectors"
+ * in a given field in a document, as one of the approaches outlined in the paper "Document Embedding with Paragraph Vectors"
  * by Andrew M. Dai, Christopher Olah, Quoc V.
  *
  */
