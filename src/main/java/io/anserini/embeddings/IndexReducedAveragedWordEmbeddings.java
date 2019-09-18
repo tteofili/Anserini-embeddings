@@ -39,8 +39,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Takes an existing input index containing text documents and a word embeddings index and generates
  * a new index for document embeddings lookup (and nearest neighbour search), by averaging word embeddings of each term
- * in a document, as one of the approaches outlined in the paper "Document Embedding with Paragraph Vectors" by Andrew
- * M. Dai, Christopher Olah, Quoc V.
+ * in a given field in a document, as one of the approaches outlined in the paper "Document Embedding with Paragraph Vectors"
+ * by Andrew M. Dai, Christopher Olah, Quoc V.
  *
  */
 public class IndexReducedAveragedWordEmbeddings {
@@ -55,9 +55,6 @@ public class IndexReducedAveragedWordEmbeddings {
 
     @Option(name = "-output", metaVar = "[path]", required = true, usage = "output document embeddings index path")
     public Path output;
-
-    @Option(name = "-dimensions", metaVar = "[int]", required = true, usage = "dimensions")
-    public int dimensions;
 
     @Option(name = "-contentField", metaVar = "[word]", required = true, usage = "content field name")
     public String contentField;
@@ -111,35 +108,40 @@ public class IndexReducedAveragedWordEmbeddings {
       if (inputDoc != null) {
         Document outputDoc = new Document();
 
-        outputDoc.add(new TextField(FIELD_DOCID, String.valueOf(i), Field.Store.YES));
+        outputDoc.add(new StringField(FIELD_DOCID, String.valueOf(i), Field.Store.YES));
 
-        float[] average = average(indexArgs.dimensions, getWordVectors(AnalyzerUtils.tokenize(analyzer,
-                inputDoc.get(indexArgs.contentField)), wordVectorSearcher, indexArgs.dimensions));
-        outputDoc.add(new FloatPoint(FIELD_AWE_POINT, average));
+        float[][] vectors = getWordVectors(AnalyzerUtils.tokenize(analyzer,
+                inputDoc.get(indexArgs.contentField)), wordVectorSearcher);
+        if (vectors != null) {
+          float[] average = average(vectors);
+          outputDoc.add(new FloatPoint(FIELD_AWE_POINT, average));
 
-        ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
-        try {
-          DataOutputStream dataOut = new DataOutputStream(bytesOut);
-          dataOut.writeInt(average.length);
-          for (float v : average) {
-            dataOut.writeFloat(v);
+          ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+          try {
+            DataOutputStream dataOut = new DataOutputStream(bytesOut);
+            dataOut.writeInt(average.length);
+            for (float v : average) {
+              dataOut.writeFloat(v);
+            }
+            dataOut.close();
+          } catch (IOException e) {
+            LOG.error(e);
           }
-          dataOut.close();
-        } catch (IOException e) {
-          LOG.error(e);
-        }
 
-        outputDoc.add(new StoredField(FIELD_AWE_VECTOR, bytesOut.toByteArray()));
-        bytesOut.close();
+          outputDoc.add(new StoredField(FIELD_AWE_VECTOR, bytesOut.toByteArray()));
+          bytesOut.close();
 
-        try {
-          documentsWriter.addDocument(outputDoc);
-          int cur = cnt.incrementAndGet();
-          if (cur % 100000 == 0) {
-            LOG.info(cnt + " docs added.");
+          try {
+            documentsWriter.addDocument(outputDoc);
+            int cur = cnt.incrementAndGet();
+            if (cur % 100000 == 0) {
+              LOG.info(cnt + " docs added.");
+            }
+          } catch (IOException e) {
+            LOG.error(e);
           }
-        } catch (IOException e) {
-          LOG.error(e);
+        } else {
+          LOG.error("couldn't derive AWE vector from document {}", inputDoc);
         }
       }
     }
@@ -164,8 +166,8 @@ public class IndexReducedAveragedWordEmbeddings {
         DurationFormatUtils.formatDuration(duration, "HH:mm:ss"));
   }
 
-  private static float[][] getWordVectors(List<String> qtokens, IndexSearcher searcher, int dimensions) throws IOException {
-    float[][] floats = new float[qtokens.size()][dimensions];
+  static float[][] getWordVectors(List<String> qtokens, IndexSearcher searcher) throws IOException {
+    float[][] floats = null;
     int j = 0;
     for (String token : qtokens) {
       TermQuery query = new TermQuery(new Term(IndexReducedWordEmbeddings.FIELD_WORD, token));
@@ -182,6 +184,10 @@ public class IndexReducedAveragedWordEmbeddings {
           vector[n] = in.readFloat();
         }
 
+        if (floats == null) {
+          floats = new float[qtokens.size()][vector.length];
+        }
+
         floats[j] = vector;
       }
       j++;
@@ -189,15 +195,16 @@ public class IndexReducedAveragedWordEmbeddings {
     return floats;
   }
 
-  private static float[] average(int dimensions, float[]... vectors) {
-    float[] average = new float[dimensions];
+  static float[] average(float[]... vectors) {
+    float[] average = new float[vectors[0].length];
     for (float[] vector : vectors) {
       for (int j = 0; j < vector.length; j++) {
         average[j] += vector[j];
       }
     }
+    float length = vectors.length;
     for (int j = 0; j < average.length; j++) {
-      average[j] /= (float) vectors.length;
+      average[j] /= length;
     }
     return average;
   }
