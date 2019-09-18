@@ -106,6 +106,10 @@
               <id>IndexReducedAveragedWordEmbeddings</id>
             </program>
             <program>
+              <mainClass>io.anserini.embeddings.AveragedWordEmbeddingsNearestNeighbour</mainClass>
+              <id>AWENearestNeighbour</id>
+            </program>
+            <program>
               <mainClass>io.anserini.embeddings.LookupWordEmbeddings</mainClass>
               <id>LookupWordEmbeddings</id>
             </program>
