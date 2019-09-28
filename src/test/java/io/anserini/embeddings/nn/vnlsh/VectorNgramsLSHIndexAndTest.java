@@ -17,7 +17,6 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.search.*;
-import org.apache.lucene.search.similarities.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
@@ -78,7 +77,7 @@ public class VectorNgramsLSHIndexAndTest {
         BooleanQuery.setMaxClauseCount(Integer.MAX_VALUE);
         // decimals, ngrams, similarity, expectedTruePositive, rerank, numSamples, hashCount, hashSetSize, bucketCount
         return Arrays.asList(new Object[][]{
-                {2, 5, 1f, 1f, false, 50, 1, 1, 512},
+                {1, 2, 1f, 1f, false, 100, 1, 1, 320},
         });
     }
 
@@ -178,8 +177,8 @@ public class VectorNgramsLSHIndexAndTest {
                                 }
                                 sb.append(fv);
                             }
-                            Query simQuery = io.anserini.embeddings.nn.QueryUtils.getSimQuery(lshAnalyzer, FIELD_VECTOR,
-                                    sb.toString(), similarity, expectedTruePositive);
+//                            Query simQuery = io.anserini.embeddings.nn.QueryUtils.getSimQuery(lshAnalyzer, FIELD_VECTOR, sb.toString(), similarity, expectedTruePositive);
+                            Query simQuery = io.anserini.embeddings.nn.QueryUtils.getBooleanQuery(lshAnalyzer, FIELD_VECTOR, sb.toString());
                             TopDocs topDocs;
                             long start = System.currentTimeMillis();
                             if (rerank) {

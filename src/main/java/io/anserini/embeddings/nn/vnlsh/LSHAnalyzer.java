@@ -51,8 +51,8 @@ public class LSHAnalyzer extends Analyzer {
     TokenFilter featurePos = new FeaturePositionTokenFilter(truncate);
     ShingleFilter shingleFilter = new ShingleFilter(featurePos, min, max);
     shingleFilter.setTokenSeparator(" ");
-    shingleFilter.setOutputUnigrams(true);
-    shingleFilter.setOutputUnigramsIfNoShingles(true);
+    shingleFilter.setOutputUnigrams(false);
+    shingleFilter.setOutputUnigramsIfNoShingles(false);
     TokenStream filter = new MinHashFilter(shingleFilter, hashCount, bucketCount, hashSetSize, bucketCount > 1);
     return new TokenStreamComponents(source, new RemoveDuplicatesTokenFilter(filter));
   }

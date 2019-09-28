@@ -207,6 +207,13 @@ public class FloatPointNNIndexAndTest {
                 }
 
             }
+            recall /= queryCount;
+            time /= queryCount;
+            long space = FileUtils.sizeOfDirectory(indexDir.toFile()) / (1024L * 1024L);
+
+            LOG.info("R@{}: {}", TOP_N, recall);
+            LOG.info("avg query time: {}ms", time);
+            LOG.info("index size: {}MB", space);
 
             reader.close();
             indexWriter.close();
@@ -214,7 +221,7 @@ public class FloatPointNNIndexAndTest {
 
             FileUtils.deleteDirectory(indexDir.toFile());
         }
-        IOUtils.write(latexTableBuilder.toString(), new FileOutputStream("target/wv-livenc-" + System.currentTimeMillis() + ".txt"), Charset.defaultCharset());
+        IOUtils.write(latexTableBuilder.toString(), new FileOutputStream("target/fp-" + System.currentTimeMillis() + ".txt"), Charset.defaultCharset());
     }
 
     private INDArray postProcess(INDArray weights, int d) {

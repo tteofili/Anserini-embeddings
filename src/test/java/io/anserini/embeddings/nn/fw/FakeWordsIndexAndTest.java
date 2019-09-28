@@ -17,7 +17,6 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.search.*;
-import org.apache.lucene.search.similarities.ClassicSimilarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
@@ -217,7 +216,7 @@ public class FakeWordsIndexAndTest {
 
             FileUtils.deleteDirectory(indexDir.toFile());
         }
-        IOUtils.write(latexTableBuilder.toString(), new FileOutputStream("target/wv-livenc-" + System.currentTimeMillis() + ".txt"), Charset.defaultCharset());
+        IOUtils.write(latexTableBuilder.toString(), new FileOutputStream("target/fw-" + System.currentTimeMillis() + ".txt"), Charset.defaultCharset());
     }
 
 
