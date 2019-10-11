@@ -1,10 +1,8 @@
 package io.anserini.embeddings.nn.fp;
 
 import com.google.common.collect.Sets;
-import io.anserini.embeddings.IndexReducedWordEmbeddings;
 import io.anserini.embeddings.nn.QueryUtils;
 import io.anserini.search.topicreader.TrecTopicReader;
-import io.anserini.util.AnalyzerUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
@@ -14,27 +12,25 @@ import org.apache.lucene.document.*;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.search.*;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopFieldDocs;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
-import org.deeplearning4j.models.embeddings.inmemory.InMemoryLookupTable;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
 import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
-import org.deeplearning4j.models.word2vec.StaticWord2Vec;
-import org.deeplearning4j.models.word2vec.Word2Vec;
 import org.deeplearning4j.models.word2vec.wordstore.VocabCache;
-import org.deeplearning4j.models.word2vec.wordstore.inmemory.InMemoryLookupCache;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.nd4j.linalg.api.ndarray.INDArray;
-import org.nd4j.linalg.api.rng.DefaultRandom;
 import org.nd4j.linalg.dimensionalityreduction.PCA;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -141,7 +137,7 @@ public class FloatPointNNIndexAndTest {
             Collection<Map<String, String>> values = read.values();
             LOG.info("testing with {} topics", values.size());
             for (Map<String, String> topic : values) {
-                for (String word : AnalyzerUtils.tokenize(standardAnalyzer, topic.get("title"))) {
+                for (String word : QueryUtils.getTokens(standardAnalyzer, null, topic.get("title"))) {
                     Set<String> truth = new HashSet<>(wordVectors.wordsNearest(word, TOP_N));
                     if (wordVectors.hasWord(word)) {
                         try {

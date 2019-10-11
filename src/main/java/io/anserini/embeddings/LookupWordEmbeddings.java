@@ -16,7 +16,7 @@
 
 package io.anserini.embeddings;
 
-import io.anserini.util.AnalyzerUtils;
+import io.anserini.embeddings.nn.QueryUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.SimpleAnalyzer;
 import org.apache.lucene.document.Document;
@@ -27,16 +27,12 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
-import org.kohsuke.args4j.OptionHandlerFilter;
-import org.kohsuke.args4j.ParserProperties;
+import org.kohsuke.args4j.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.nio.file.Path;
-import java.util.List;
+import java.util.Collection;
 
 /**
  * Example illustrating how to look up word vectors. Note that terms are processed with a Lucene Analyzer, which means
@@ -70,13 +66,13 @@ public class LookupWordEmbeddings {
     IndexSearcher searcher = new IndexSearcher(reader);
 
     Analyzer analyzer = new EnglishStemmingAnalyzer("porter"); // Default used in indexing.
-    List<String> qtokens = AnalyzerUtils.tokenize(analyzer, lookupArgs.word);
+    Collection<String> qtokens = QueryUtils.getTokens(analyzer, null, lookupArgs.word);
     if (qtokens.size() != 1) {
       System.err.println("Error: word tokenizes to more than one token");
       System.exit(-1);
     }
 
-    TermQuery query = new TermQuery(new Term(IndexWordEmbeddings.FIELD_WORD, qtokens.get(0)));
+    TermQuery query = new TermQuery(new Term(IndexWordEmbeddings.FIELD_WORD, qtokens.iterator().next()));
 
     TopDocs topDocs = searcher.search(query, Integer.MAX_VALUE);
     if (topDocs.totalHits.value == 0) {
@@ -87,7 +83,7 @@ public class LookupWordEmbeddings {
 
     for ( int i=0; i<topDocs.scoreDocs.length; i++ ) {
       Document doc = reader.document(topDocs.scoreDocs[i].doc);
-      List<String> tokens = AnalyzerUtils.tokenize(new SimpleAnalyzer(), doc.getField(IndexWordEmbeddings.FIELD_WORD).stringValue());
+      Collection<String> tokens = QueryUtils.getTokens(new SimpleAnalyzer(), null, doc.getField(IndexWordEmbeddings.FIELD_WORD).stringValue());
       byte[] value = doc.getField(IndexWordEmbeddings.FIELD_VECTOR).binaryValue().bytes;
       DataInputStream in = new DataInputStream(new ByteArrayInputStream(value));
 

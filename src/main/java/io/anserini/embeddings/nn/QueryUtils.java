@@ -24,7 +24,7 @@ import static org.apache.lucene.search.BooleanClause.Occur.SHOULD;
  */
 public class QueryUtils {
 
-  static Collection<String> getTokens(Analyzer analyzer, String field, String sampleTextString) throws IOException {
+  public static Collection<String> getTokens(Analyzer analyzer, String field, String sampleTextString) throws IOException {
     Collection<String> tokens = new LinkedList<>();
     TokenStream ts = analyzer.tokenStream(field, sampleTextString);
     ts.reset();

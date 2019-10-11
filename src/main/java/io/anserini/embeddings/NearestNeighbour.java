@@ -16,7 +16,7 @@
 
 package io.anserini.embeddings;
 
-import io.anserini.util.AnalyzerUtils;
+import io.anserini.embeddings.nn.QueryUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.FloatPointNearestNeighbor;
@@ -30,7 +30,7 @@ import org.kohsuke.args4j.*;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.nio.file.Path;
-import java.util.List;
+import java.util.Collection;
 
 /**
  * Example illustrating how to perform word vectors nearest neighbour using Lucene {@link FloatPointNearestNeighbor}.
@@ -62,13 +62,13 @@ public class NearestNeighbour {
     IndexSearcher searcher = new IndexSearcher(reader);
 
     Analyzer analyzer = new EnglishStemmingAnalyzer("porter"); // Default used in indexing.
-    List<String> qtokens = AnalyzerUtils.tokenize(analyzer, lookupArgs.word);
+    Collection<String> qtokens = QueryUtils.getTokens(analyzer, null, lookupArgs.word);
     if (qtokens.size() != 1) {
       System.err.println("Error: word tokenizes to more than one token");
       System.exit(-1);
     }
 
-    TermQuery query = new TermQuery(new Term(IndexWordEmbeddings.FIELD_WORD, qtokens.get(0)));
+    TermQuery query = new TermQuery(new Term(IndexWordEmbeddings.FIELD_WORD, qtokens.iterator().next()));
 
     TopDocs topDocs = searcher.search(query, 1);
     if (topDocs.totalHits.value == 0) {

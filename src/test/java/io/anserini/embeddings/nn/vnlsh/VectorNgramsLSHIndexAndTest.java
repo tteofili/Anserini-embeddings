@@ -3,7 +3,6 @@ package io.anserini.embeddings.nn.vnlsh;
 import com.google.common.collect.Sets;
 import io.anserini.embeddings.nn.QueryUtils;
 import io.anserini.search.topicreader.TrecTopicReader;
-import io.anserini.util.AnalyzerUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
@@ -173,7 +172,7 @@ public class VectorNgramsLSHIndexAndTest {
             Collection<Map<String, String>> values = read.values();
             LOG.info("testing with {} topics", values.size());
             for (Map<String, String> topic : values) {
-                for (String word : AnalyzerUtils.tokenize(standardAnalyzer, topic.get("title"))) {
+                for (String word : QueryUtils.getTokens(standardAnalyzer, null, topic.get("title"))) {
                     Set<String> truth = new HashSet<>(wordVectors.wordsNearest(word, TOP_N));
                     if (!truth.isEmpty() && wordVectors.hasWord(word)) {
                         try {

@@ -16,18 +16,20 @@
 
 package io.anserini.embeddings;
 
-import io.anserini.util.AnalyzerUtils;
+import io.anserini.embeddings.nn.QueryUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.FloatPointNearestNeighbor;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.search.*;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopFieldDocs;
 import org.apache.lucene.store.FSDirectory;
 import org.kohsuke.args4j.*;
 
 import java.nio.file.Path;
-import java.util.List;
+import java.util.Collection;
 
 /**
  * Example illustrating how to perform AWE vectors (see {@code IndexReducedAveragedWordEmbeddings}) nearest neighbour
@@ -77,7 +79,7 @@ public class AveragedWordEmbeddingsNearestNeighbour {
 
     try {
       Analyzer analyzer = new EnglishStemmingAnalyzer("porter"); // Default used in indexing.
-      List<String> qtokens = AnalyzerUtils.tokenize(analyzer, lookupArgs.text);
+      Collection<String> qtokens = QueryUtils.getTokens(analyzer, null, lookupArgs.text);
 
       float[] average = IndexReducedAveragedWordEmbeddings.average(IndexReducedAveragedWordEmbeddings.getWordVectors(qtokens, searcher));
 

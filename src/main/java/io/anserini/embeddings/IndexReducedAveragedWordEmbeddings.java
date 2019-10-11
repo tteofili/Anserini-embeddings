@@ -16,7 +16,7 @@
 
 package io.anserini.embeddings;
 
-import io.anserini.util.AnalyzerUtils;
+import io.anserini.embeddings.nn.QueryUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,7 +32,7 @@ import org.kohsuke.args4j.*;
 
 import java.io.*;
 import java.nio.file.Path;
-import java.util.List;
+import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -110,7 +110,7 @@ public class IndexReducedAveragedWordEmbeddings {
 
         outputDoc.add(new StringField(FIELD_DOCID, String.valueOf(i), Field.Store.YES));
 
-        float[][] vectors = getWordVectors(AnalyzerUtils.tokenize(analyzer,
+        float[][] vectors = getWordVectors(QueryUtils.getTokens(analyzer, null,
                 inputDoc.get(indexArgs.contentField)), wordVectorSearcher);
         if (vectors != null) {
           float[] average = average(vectors);
@@ -166,7 +166,7 @@ public class IndexReducedAveragedWordEmbeddings {
         DurationFormatUtils.formatDuration(duration, "HH:mm:ss"));
   }
 
-  static float[][] getWordVectors(List<String> qtokens, IndexSearcher searcher) throws IOException {
+  static float[][] getWordVectors(Collection<String> qtokens, IndexSearcher searcher) throws IOException {
     float[][] floats = null;
     int j = 0;
     for (String token : qtokens) {

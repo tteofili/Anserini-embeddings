@@ -3,7 +3,6 @@ package io.anserini.embeddings.nn.fw;
 import com.google.common.collect.Sets;
 import io.anserini.embeddings.nn.QueryUtils;
 import io.anserini.search.topicreader.TrecTopicReader;
-import io.anserini.util.AnalyzerUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.Analyzer;
@@ -18,7 +17,6 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.search.*;
 import org.apache.lucene.search.similarities.ClassicSimilarity;
-import org.apache.lucene.search.similarities.LMDirichletSimilarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
@@ -154,7 +152,7 @@ public class FakeWordsIndexAndTest {
             Collection<Map<String, String>> values = read.values();
             LOG.info("testing with {} topics", values.size());
             for (Map<String, String> topic : values) {
-                for (String word : AnalyzerUtils.tokenize(standardAnalyzer, topic.get("title"))) {
+                for (String word : QueryUtils.getTokens(standardAnalyzer,null,  topic.get("title"))) {
                     Set<String> truth = new HashSet<>(wordVectors.wordsNearest(word, TOP_N));
                     if (!truth.isEmpty() && wordVectors.hasWord(word)) {
                         try {
