@@ -1,6 +1,6 @@
 package io.anserini.embeddings.nn;
 
-import io.anserini.embeddings.nn.vnlsh.LSHAnalyzer;
+import io.anserini.embeddings.nn.vnlsh.VectorNgramLSHAnalyzer;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -46,7 +46,7 @@ public class QueryUtils {
   public static Query getSimilarityQuery(IndexReader reader, int docId, String similarityField, float tp) {
     try {
       BooleanQuery.Builder similarityQuery = new BooleanQuery.Builder();
-      LSHAnalyzer analyzer = new LSHAnalyzer();
+      VectorNgramLSHAnalyzer analyzer = new VectorNgramLSHAnalyzer();
       Document doc = reader.document(docId);
       String fvString = doc.get(similarityField);
       if (fvString != null && fvString.trim().length() > 0) {
@@ -209,7 +209,7 @@ public class QueryUtils {
     }
 
     public static Query getCTSimQuery(Analyzer analyzer, String fieldVector, String vectorString, float mtf) throws IOException {
-        CommonTermsQuery commonTermsQuery = new CommonTermsQuery(BooleanClause.Occur.SHOULD, BooleanClause.Occur.SHOULD, mtf);
+        CommonTermsQuery commonTermsQuery = new CommonTermsQuery(SHOULD, SHOULD, mtf);
         for (String token : getTokens(analyzer, fieldVector, vectorString)) {
             commonTermsQuery.add(new Term(fieldVector, token));
         }

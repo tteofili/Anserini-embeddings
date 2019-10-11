@@ -58,9 +58,10 @@ public class VectorNgramsLSHIndexAndTest {
     private final int hashCount;
     private final int hashSetSize;
     private final int bucketCount;
+    private final int topK;
 
     public VectorNgramsLSHIndexAndTest(int decimals, int ngramSize, float similarity, float expectedTruePositive, boolean rerank,
-                                       double numSamples, int hashCount, int hashSetSize, int bucketCount) {
+                                       double numSamples, int hashCount, int hashSetSize, int bucketCount, int topK) {
         this.decimals = decimals;
         this.ngramSize = ngramSize;
         this.similarity = similarity;
@@ -70,14 +71,20 @@ public class VectorNgramsLSHIndexAndTest {
         this.hashCount = hashCount;
         this.hashSetSize = hashSetSize;
         this.bucketCount = bucketCount;
+        this.topK = topK;
     }
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         BooleanQuery.setMaxClauseCount(Integer.MAX_VALUE);
-        // decimals, ngrams, similarity, expectedTruePositive, rerank, numSamples, hashCount, hashSetSize, bucketCount
+        // decimals, ngrams, similarity, expectedTruePositive, rerank, numSamples, hashCount, hashSetSize, bucketCount, topk
         return Arrays.asList(new Object[][]{
-                {1, 2, 1f, 1f, false, 100, 1, 1, 320},
+//                {1, 2, 1f, 1f, false, 50, 1, 1, 300, 50},
+//                {1, 5, 1f, 1f, false, 50, 30, 1, 30, 50},
+
+                {1, 4, 1f, 1f, false, 50, 10, 1, 10, 50},
+                {1, 4, 1f, 1f, false, 50, 10, 5, 10, 50},
+                {1, 2, 1f, 1f, false, 50, 5, 1, 5, 50},
         });
     }
 
@@ -116,8 +123,8 @@ public class VectorNgramsLSHIndexAndTest {
             Path indexDir = Files.createTempDirectory("vnlsh-test");
             Directory d = FSDirectory.open(indexDir);
             Map<String, Analyzer> map = new HashMap<>();
-            LSHAnalyzer lshAnalyzer = new LSHAnalyzer(decimals, ngramSize, hashCount, bucketCount, hashSetSize);
-            map.put(FIELD_VECTOR, lshAnalyzer);
+            VectorNgramLSHAnalyzer vectorNgramLshAnalyzer = new VectorNgramLSHAnalyzer(decimals, ngramSize, hashCount, bucketCount, hashSetSize);
+            map.put(FIELD_VECTOR, vectorNgramLshAnalyzer);
             Analyzer analyzer = new PerFieldAnalyzerWrapper(new StandardAnalyzer(), map);
 
             IndexWriter indexWriter = new IndexWriter(d, new IndexWriterConfig(analyzer));
@@ -150,6 +157,7 @@ public class VectorNgramsLSHIndexAndTest {
             });
 
             indexWriter.commit();
+            indexWriter.forceMerge(4);
             LOG.info("{} words indexed", cnt.get());
 
             DirectoryReader reader = DirectoryReader.open(indexWriter);
@@ -167,7 +175,7 @@ public class VectorNgramsLSHIndexAndTest {
             for (Map<String, String> topic : values) {
                 for (String word : AnalyzerUtils.tokenize(standardAnalyzer, topic.get("title"))) {
                     Set<String> truth = new HashSet<>(wordVectors.wordsNearest(word, TOP_N));
-                    if (wordVectors.hasWord(word)) {
+                    if (!truth.isEmpty() && wordVectors.hasWord(word)) {
                         try {
                             double[] vector = wordVectors.getWordVectorMatrixNormalized(word).toDoubleVector();
                             StringBuilder sb = new StringBuilder();
@@ -177,18 +185,19 @@ public class VectorNgramsLSHIndexAndTest {
                                 }
                                 sb.append(fv);
                             }
-//                            Query simQuery = io.anserini.embeddings.nn.QueryUtils.getSimQuery(lshAnalyzer, FIELD_VECTOR, sb.toString(), similarity, expectedTruePositive);
-                            Query simQuery = io.anserini.embeddings.nn.QueryUtils.getBooleanQuery(lshAnalyzer, FIELD_VECTOR, sb.toString());
+//                            Query simQuery = io.anserini.embeddings.nn.QueryUtils.getSimQuery(vectorNgramLshAnalyzer, FIELD_VECTOR, sb.toString(), similarity, expectedTruePositive);
+//                            Query simQuery = QueryUtils.getBooleanQuery(vectorNgramLshAnalyzer, FIELD_VECTOR, sb.toString());
+                            Query simQuery = io.anserini.embeddings.nn.QueryUtils.getCTSimQuery(vectorNgramLshAnalyzer, FIELD_VECTOR, sb.toString(), 0.99f);
                             TopDocs topDocs;
                             long start = System.currentTimeMillis();
                             if (rerank) {
-                                topDocs = searcher.search(simQuery, 2 * TOP_N);
+                                topDocs = searcher.search(simQuery, 2 * topK);
                                 if (topDocs.totalHits.value > 0) {
-                                    QueryUtils.kNNRerank(1 + TOP_N, false, 100d,
+                                    QueryUtils.kNNRerank(TOP_N, false, 100d,
                                             Collections.singletonList(FIELD_VECTOR), topDocs, searcher);
                                 }
                             } else {
-                                topDocs = searcher.search(simQuery, 1 + TOP_N);
+                                topDocs = searcher.search(simQuery, 1 + topK);
                             }
                             time += System.currentTimeMillis() - start;
                             Set<String> observations = new HashSet<>();
@@ -209,7 +218,7 @@ public class VectorNgramsLSHIndexAndTest {
                         }
                     }
                 }
-                if (queryCount > numSamples) {
+                if (numSamples > 0 && queryCount > numSamples) {
                     break;
                 }
 
@@ -218,7 +227,7 @@ public class VectorNgramsLSHIndexAndTest {
             time /= queryCount;
             long space = FileUtils.sizeOfDirectory(indexDir.toFile()) / (1024L * 1024L);
 
-            LOG.info("R@{}: {}", TOP_N, recall);
+            LOG.info("R@{}: {}", topK, recall);
             LOG.info("avg query time: {}ms", time);
             LOG.info("index size: {}MB", space);
 
@@ -232,7 +241,7 @@ public class VectorNgramsLSHIndexAndTest {
                     .append(this.rerank).append(TABLE_COLUMN_SEPARATOR)
                     .append(this.similarity).append(TABLE_COLUMN_SEPARATOR)
                     .append(this.expectedTruePositive).append(TABLE_COLUMN_SEPARATOR)
-                    .append(recall).append('@').append(TOP_N).append(TABLE_COLUMN_SEPARATOR)
+                    .append(recall).append('@').append(topK).append(TABLE_COLUMN_SEPARATOR)
                     .append(time).append(TABLE_COLUMN_SEPARATOR)
                     .append(space).append(TABLE_ROW_END)
                     .append("\n");

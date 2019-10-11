@@ -98,7 +98,7 @@ public class IndexReducedWordEmbeddings {
     INDArray weights = wordVectors.lookupTable().getWeights();
     INDArray reduced = PCA.pca(weights, dimensions, true);
 
-    LOG.info("Completed in " + (System.currentTimeMillis()-startTime)/1000 + "s.");
+    LOG.info("Reduction completed in " + (System.currentTimeMillis()-startTime)/1000 + "s.");
 
     for (int i = 0; i < reduced.rows(); i++) {
       Document doc = new Document();
@@ -135,7 +135,7 @@ public class IndexReducedWordEmbeddings {
 
     }
 
-    LOG.info(cnt.get() + " words added.");
+    LOG.info(cnt.get() + " words indexed.");
     int numIndexed = writer.getDocStats().maxDoc;
 
     try {

@@ -17,6 +17,8 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.search.*;
+import org.apache.lucene.search.similarities.ClassicSimilarity;
+import org.apache.lucene.search.similarities.LMDirichletSimilarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
@@ -46,6 +48,7 @@ public class FakeWordsIndexAndTest {
     private static final String TABLE_ROW_END = "\\\\";
     private static final String TABLE_COLUMN_SEPARATOR = " & ";
     private static final int TOP_N = 10;
+    private static final int TOP_K = 50;
 
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
@@ -64,7 +67,13 @@ public class FakeWordsIndexAndTest {
         BooleanQuery.setMaxClauseCount(Integer.MAX_VALUE);
         // numSamples
         return Arrays.asList(new Object[][]{
-                {100, 30, false},
+                {50, 20, false},
+//                {50, 30, false},
+//                {50, 40, false},
+//                {50, 50, false},
+//                {50, 60, false},
+//                {50, 70, false},
+//                {50, 80, false},
         });
     }
 
@@ -134,6 +143,7 @@ public class FakeWordsIndexAndTest {
 
             DirectoryReader reader = DirectoryReader.open(indexWriter);
             IndexSearcher searcher = new IndexSearcher(reader);
+            searcher.setSimilarity(new ClassicSimilarity());
             StandardAnalyzer standardAnalyzer = new StandardAnalyzer();
             double recall = 0;
             double time = 0d;
@@ -146,7 +156,7 @@ public class FakeWordsIndexAndTest {
             for (Map<String, String> topic : values) {
                 for (String word : AnalyzerUtils.tokenize(standardAnalyzer, topic.get("title"))) {
                     Set<String> truth = new HashSet<>(wordVectors.wordsNearest(word, TOP_N));
-                    if (wordVectors.hasWord(word)) {
+                    if (!truth.isEmpty() && wordVectors.hasWord(word)) {
                         try {
                             double[] vector = wordVectors.getWordVectorMatrixNormalized(word).toDoubleVector();
                             StringBuilder sb = new StringBuilder();
@@ -156,8 +166,8 @@ public class FakeWordsIndexAndTest {
                                 }
                                 sb.append(fv);
                             }
-                            Query simQuery = io.anserini.embeddings.nn.QueryUtils.getBooleanQuery(fwa, FIELD_VECTOR,
-                                    sb.toString());
+                            Query simQuery = io.anserini.embeddings.nn.QueryUtils.getCTSimQuery(fwa, FIELD_VECTOR, sb.toString(), 0.97f);
+//                            Query simQuery = io.anserini.embeddings.nn.QueryUtils.getBooleanQuery(fwa, FIELD_VECTOR, sb.toString());
                             TopDocs topDocs;
                             long start = System.currentTimeMillis();
                             if (rerank) {
@@ -167,7 +177,7 @@ public class FakeWordsIndexAndTest {
                                             Collections.singletonList(FIELD_VECTOR), topDocs, searcher);
                                 }
                             } else {
-                                topDocs = searcher.search(simQuery, 1 + TOP_N);
+                                topDocs = searcher.search(simQuery, TOP_K);
                             }
                             time += System.currentTimeMillis() - start;
                             Set<String> observations = new HashSet<>();
@@ -197,7 +207,7 @@ public class FakeWordsIndexAndTest {
             time /= queryCount;
             long space = FileUtils.sizeOfDirectory(indexDir.toFile()) / (1024L * 1024L);
 
-            LOG.info("R@{}: {}", TOP_N, recall);
+            LOG.info("R@{}: {}", TOP_K, recall);
             LOG.info("avg query time: {}ms", time);
             LOG.info("index size: {}MB", space);
 
@@ -206,7 +216,7 @@ public class FakeWordsIndexAndTest {
                     .append(this.numSamples).append(TABLE_COLUMN_SEPARATOR)
                     .append(this.q).append(TABLE_COLUMN_SEPARATOR)
                     .append(this.rerank).append(TABLE_COLUMN_SEPARATOR)
-                    .append(recall).append('@').append(TOP_N).append(TABLE_COLUMN_SEPARATOR)
+                    .append(recall).append('@').append(TOP_K).append(TABLE_COLUMN_SEPARATOR)
                     .append(time).append(TABLE_COLUMN_SEPARATOR)
                     .append(space).append(TABLE_ROW_END)
                     .append("\n");

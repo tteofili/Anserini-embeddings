@@ -32,6 +32,7 @@ final class FeaturePositionTokenFilter extends TokenFilter {
         String token = new String(termAttribute.buffer(), 0, termAttribute.length());
         termAttribute.setEmpty();
         termAttribute.append(String.valueOf(tokenCount));
+        termAttribute.append("_");
         if (start > 0 && start < token.length()) {
             if (token.startsWith("-")) {
               termAttribute.append("-");

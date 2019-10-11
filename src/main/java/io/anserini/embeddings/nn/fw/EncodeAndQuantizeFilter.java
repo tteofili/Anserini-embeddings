@@ -53,6 +53,7 @@ public final class EncodeAndQuantizeFilter extends TokenFilter {
     @Override
     public void reset() throws IOException {
         super.reset();
+        this.fs.clear();
         this.tokenCount = 0;
     }
 }

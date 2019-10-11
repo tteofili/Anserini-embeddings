@@ -117,6 +117,14 @@
               <mainClass>io.anserini.embeddings.NearestNeighbour</mainClass>
               <id>NearestNeighbour</id>
             </program>
+            <program>
+              <mainClass>io.anserini.embeddings.nn.vnlsh.VectorNgramsLSHRunner</mainClass>
+              <id>lsh</id>
+            </program>
+            <program>
+              <mainClass>io.anserini.embeddings.nn.fw.FakeWordsRunner</mainClass>
+              <id>fw</id>
+            </program>
           </programs>
         </configuration>
       </plugin>

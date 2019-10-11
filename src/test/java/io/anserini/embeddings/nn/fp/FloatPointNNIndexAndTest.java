@@ -1,6 +1,7 @@
 package io.anserini.embeddings.nn.fp;
 
 import com.google.common.collect.Sets;
+import io.anserini.embeddings.IndexReducedWordEmbeddings;
 import io.anserini.embeddings.nn.QueryUtils;
 import io.anserini.search.topicreader.TrecTopicReader;
 import io.anserini.util.AnalyzerUtils;
@@ -13,22 +14,27 @@ import org.apache.lucene.document.*;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.deeplearning4j.models.embeddings.inmemory.InMemoryLookupTable;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
 import org.deeplearning4j.models.embeddings.wordvectors.WordVectors;
+import org.deeplearning4j.models.word2vec.StaticWord2Vec;
+import org.deeplearning4j.models.word2vec.Word2Vec;
 import org.deeplearning4j.models.word2vec.wordstore.VocabCache;
+import org.deeplearning4j.models.word2vec.wordstore.inmemory.InMemoryLookupCache;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.nd4j.linalg.api.ndarray.INDArray;
+import org.nd4j.linalg.api.rng.DefaultRandom;
 import org.nd4j.linalg.dimensionalityreduction.PCA;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -45,6 +51,7 @@ public class FloatPointNNIndexAndTest {
     private static final String TABLE_ROW_END = "\\\\";
     private static final String TABLE_COLUMN_SEPARATOR = " & ";
     private static final int TOP_N = 10;
+    private static final int TOP_K = 100;
     private static final String FLOAT_POINT = "float_point";
 
     private final Logger LOG = LoggerFactory.getLogger(getClass());
@@ -87,53 +94,24 @@ public class FloatPointNNIndexAndTest {
                 continue;
             }
             WordVectors wordVectors = WordVectorSerializer.readWord2VecModel(model.toFile());
-
-            LOG.info("reducing vectors");
-            int dim = 8;
-            INDArray x = postProcess(wordVectors.lookupTable().getWeights(), dim);
-            INDArray pcaX = PCA.pca(x, dim, true);
-            INDArray reduced = postProcess(pcaX, dim);
-            // see: https://arxiv.org/abs/1708.03629#
-
-            LOG.info("vectors reduced");
-
-            wordVectors.lookupTable().resetWeights();
-            VocabCache vocab = wordVectors.vocab();
-            AtomicInteger inc = new AtomicInteger();
-            vocab.words().forEach(obj -> {
-                        String word = (String) obj;
-                        wordVectors.lookupTable().putVector(word, reduced.getRow(inc.get()));
-                        inc.getAndIncrement();
-                    });
-            WordVectorSerializer.writeWordVectors(wordVectors.lookupTable(), "reduced-"+model.getFileName());
-
-            LOG.info("model: {}", model);
-            LOG.info("config: {}", this.toString());
-
             Path indexDir = Files.createTempDirectory("fpnn-test");
             Directory d = FSDirectory.open(indexDir);
             Map<String, Analyzer> map = new HashMap<>();
             Analyzer analyzer = new PerFieldAnalyzerWrapper(new StandardAnalyzer(), map);
 
+
             IndexWriter indexWriter = new IndexWriter(d, new IndexWriterConfig(analyzer));
             final AtomicInteger cnt = new AtomicInteger();
 
+            VocabCache vocab = wordVectors.vocab();
             vocab.words().forEach(obj -> {
                 String word = (String) obj;
                 Document doc = new Document();
 
                 doc.add(new StringField(FIELD_WORD, word, Field.Store.YES));
-                double[] vector = wordVectors.getWordVectorMatrixNormalized(word).toDoubleVector();
-                StringBuilder sb = new StringBuilder();
-                for (double fv : vector) {
-                    if (sb.length() > 0) {
-                        sb.append(' ');
-                    }
-                    sb.append(fv);
-                }
-                float[] reducedPoint = reduced.getRow(cnt.get()).toFloatVector();
-                doc.add(new FloatPoint(FLOAT_POINT, reducedPoint));
-                doc.add(new TextField(FIELD_VECTOR, sb.toString(), rerank ? Field.Store.YES : Field.Store.NO));
+                float[] vector = wordVectors.getWordVectorMatrixNormalized(word).toFloatVector();
+                doc.add(new FloatPoint(FLOAT_POINT, vector));
+
                 try {
                     indexWriter.addDocument(doc);
                     int cur = cnt.incrementAndGet();
@@ -146,9 +124,11 @@ public class FloatPointNNIndexAndTest {
             });
 
             indexWriter.commit();
-            LOG.info("{} words indexed", cnt.get());
 
             DirectoryReader reader = DirectoryReader.open(indexWriter);
+
+            LOG.info("{} words indexed", reader.numDocs());
+
             IndexSearcher searcher = new IndexSearcher(reader);
 
             StandardAnalyzer standardAnalyzer = new StandardAnalyzer();
@@ -166,22 +146,15 @@ public class FloatPointNNIndexAndTest {
                     if (wordVectors.hasWord(word)) {
                         try {
                             float[] vector = wordVectors.getWordVectorMatrixNormalized(word).toFloatVector();
-                            StringBuilder sb = new StringBuilder();
-                            for (double fv : vector) {
-                                if (sb.length() > 0) {
-                                    sb.append(' ');
-                                }
-                                sb.append(fv);
-                            }
-                            TopDocs topDocs;
+                            TopFieldDocs topDocs;
                             long start = System.currentTimeMillis();
                             if (rerank) {
-                                topDocs = FloatPointNearestNeighbor.nearest(searcher, FLOAT_POINT, 2 * TOP_N, vector);
+                                topDocs = FloatPointNearestNeighbor.nearest(searcher, FLOAT_POINT, 2 * TOP_K, vector);
                                 if (topDocs.totalHits.value > 0) {
                                     QueryUtils.kNNRerank(1 + TOP_N, false, 100d, Collections.singletonList(FIELD_VECTOR), topDocs, searcher);
                                 }
                             } else {
-                                topDocs = FloatPointNearestNeighbor.nearest(searcher, FLOAT_POINT, TOP_N, vector);
+                                topDocs = FloatPointNearestNeighbor.nearest(searcher, FLOAT_POINT, TOP_K, vector);
                             }
                             time += System.currentTimeMillis() - start;
                             Set<String> observations = new HashSet<>();
@@ -211,7 +184,7 @@ public class FloatPointNNIndexAndTest {
             time /= queryCount;
             long space = FileUtils.sizeOfDirectory(indexDir.toFile()) / (1024L * 1024L);
 
-            LOG.info("R@{}: {}", TOP_N, recall);
+            LOG.info("R@{}: {}", TOP_K, recall);
             LOG.info("avg query time: {}ms", time);
             LOG.info("index size: {}MB", space);
 
@@ -225,16 +198,8 @@ public class FloatPointNNIndexAndTest {
     }
 
     private INDArray postProcess(INDArray weights, int d) {
-        INDArray meanWeights = weights.sub(weights.meanNumber());
-        INDArray pca = PCA.pca(meanWeights, d, true);
-        for (int j = 0; j < weights.rows(); j++) {
-            INDArray v = meanWeights.getRow(j);
-            for (int s = 0; s < d; s++) {
-                INDArray u = pca.getColumn(s);
-                INDArray mul = u.mmul(v).transpose().mmul(u);
-                v.subi(mul.transpose());
-            }
-        }
-        return weights;
+        INDArray meanWeights = weights.dup().subRowVector(weights.mean(0));
+        INDArray pc = PCA.principalComponents(PCA.covarianceMatrix(meanWeights)[0])[0];
+        return meanWeights.mmul(pc.transpose()).mmul(pc);
     }
 }
