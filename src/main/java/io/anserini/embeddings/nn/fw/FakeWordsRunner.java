@@ -137,8 +137,9 @@ public class FakeWordsRunner {
                             }
                             Query simQuery = io.anserini.embeddings.nn.QueryUtils.getCTSimQuery(fwa, FIELD_VECTOR,
                                     sb.toString(), 0.999f);
-                            TopDocs topDocs = searcher.search(simQuery, topK);
                             long start = System.currentTimeMillis();
+
+                            TopDocs topDocs = searcher.search(simQuery, topK);
 
                             time += System.currentTimeMillis() - start;
                             Set<String> observations = new HashSet<>();
