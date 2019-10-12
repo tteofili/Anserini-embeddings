@@ -75,7 +75,7 @@ public class LookupWordEmbeddings {
     TermQuery query = new TermQuery(new Term(IndexWordEmbeddings.FIELD_WORD, qtokens.iterator().next()));
 
     TopDocs topDocs = searcher.search(query, Integer.MAX_VALUE);
-    if (topDocs.totalHits.value == 0) {
+    if (topDocs.totalHits == 0) {
       System.err.println("Error: term not found!");
       System.exit(-1);
     }

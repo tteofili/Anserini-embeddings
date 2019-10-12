@@ -146,7 +146,7 @@ public class FloatPointNNIndexAndTest {
                             long start = System.currentTimeMillis();
                             if (rerank) {
                                 topDocs = FloatPointNearestNeighbor.nearest(searcher, FLOAT_POINT, 2 * TOP_K, vector);
-                                if (topDocs.totalHits.value > 0) {
+                                if (topDocs.totalHits > 0) {
                                     QueryUtils.kNNRerank(1 + TOP_N, false, 100d, Collections.singletonList(FIELD_VECTOR), topDocs, searcher);
                                 }
                             } else {

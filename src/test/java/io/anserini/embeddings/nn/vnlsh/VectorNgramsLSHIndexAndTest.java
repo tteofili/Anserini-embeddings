@@ -191,7 +191,7 @@ public class VectorNgramsLSHIndexAndTest {
                             long start = System.currentTimeMillis();
                             if (rerank) {
                                 topDocs = searcher.search(simQuery, 2 * topK);
-                                if (topDocs.totalHits.value > 0) {
+                                if (topDocs.totalHits > 0) {
                                     QueryUtils.kNNRerank(TOP_N, false, 100d,
                                             Collections.singletonList(FIELD_VECTOR), topDocs, searcher);
                                 }

@@ -147,7 +147,7 @@ public class IndexReducedAveragedWordEmbeddings {
     }
 
     LOG.info(cnt.get() + " docs added.");
-    int numIndexed = documentsWriter.getDocStats().maxDoc;
+    int numIndexed = documentsWriter.maxDoc();
 
     try {
       documentsWriter.commit();

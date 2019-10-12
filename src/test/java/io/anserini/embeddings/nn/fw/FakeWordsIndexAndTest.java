@@ -170,7 +170,7 @@ public class FakeWordsIndexAndTest {
                             long start = System.currentTimeMillis();
                             if (rerank) {
                                 topDocs = searcher.search(simQuery, 2 * TOP_N);
-                                if (topDocs.totalHits.value > 0) {
+                                if (topDocs.totalHits > 0) {
                                     QueryUtils.kNNRerank(1 + TOP_N, false, 100d,
                                             Collections.singletonList(FIELD_VECTOR), topDocs, searcher);
                                 }
