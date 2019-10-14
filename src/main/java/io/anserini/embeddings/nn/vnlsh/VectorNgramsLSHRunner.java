@@ -136,12 +136,12 @@ public class VectorNgramsLSHRunner {
         double recall = 0;
         double time = 0d;
 
+        System.out.println("testing at retrieval depth: "+ Arrays.toString(topKs));
         for (int topK : topKs) {
             TrecTopicReader trecTopicReader = new TrecTopicReader(Paths.get("src/test/resources/topics.robust04.301-450.601-700.txt"));
             SortedMap<Integer, Map<String, String>> read = trecTopicReader.read();
             int queryCount = 0;
             Collection<Map<String, String>> values = read.values();
-            System.out.printf("testing with %s topics\n", values.size());
             for (Map<String, String> topic : values) {
                 for (String word : AnalyzerUtils.tokenize(standardAnalyzer, topic.get("title"))) {
                     Set<String> truth = new HashSet<>(wordVectors.wordsNearest(word, TOP_N));

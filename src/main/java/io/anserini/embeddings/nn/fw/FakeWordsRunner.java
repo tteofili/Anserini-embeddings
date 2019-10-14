@@ -1,8 +1,6 @@
 package io.anserini.embeddings.nn.fw;
 
 import com.google.common.collect.Sets;
-import io.anserini.embeddings.IndexReducedWordEmbeddings;
-import io.anserini.embeddings.nn.QueryUtils;
 import io.anserini.search.topicreader.TrecTopicReader;
 import io.anserini.util.AnalyzerUtils;
 import org.apache.commons.io.FileUtils;
@@ -114,6 +112,7 @@ public class FakeWordsRunner {
         searcher.setSimilarity(new ClassicSimilarity());
         StandardAnalyzer standardAnalyzer = new StandardAnalyzer();
 
+        System.out.println("testing at retrieval depth: "+ Arrays.toString(topKs));
         for (int topK : topKs) {
             double recall = 0;
             double time = 0d;

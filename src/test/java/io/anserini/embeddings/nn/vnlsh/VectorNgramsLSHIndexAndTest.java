@@ -78,12 +78,8 @@ public class VectorNgramsLSHIndexAndTest {
         BooleanQuery.setMaxClauseCount(Integer.MAX_VALUE);
         // decimals, ngrams, similarity, expectedTruePositive, rerank, numSamples, hashCount, hashSetSize, bucketCount, topk
         return Arrays.asList(new Object[][]{
-//                {1, 2, 1f, 1f, false, 50, 1, 1, 300, 50},
-//                {1, 5, 1f, 1f, false, 50, 30, 1, 30, 50},
-
-                {1, 4, 1f, 1f, false, 50, 10, 1, 10, 50},
-                {1, 4, 1f, 1f, false, 50, 10, 5, 10, 50},
-                {1, 2, 1f, 1f, false, 50, 5, 1, 5, 50},
+                {1, 2, 1f, 1f, false, 50, 1, 1, 300, 50},
+                {1, 2, 1f, 1f, false, 50, 30, 1, 30, 50},
         });
     }
 

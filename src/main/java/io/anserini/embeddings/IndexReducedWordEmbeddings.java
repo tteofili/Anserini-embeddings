@@ -136,7 +136,7 @@ public class IndexReducedWordEmbeddings {
     }
 
     LOG.info(cnt.get() + " words indexed.");
-    int numIndexed = writer.maxDoc();
+    int numIndexed = writer.numDocs();
 
     try {
       writer.commit();

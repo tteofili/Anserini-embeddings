@@ -124,7 +124,7 @@ public class IndexWordEmbeddings {
     });
 
     LOG.info(cnt.get() + " words added.");
-    int numIndexed = writer.maxDoc();
+    int numIndexed = writer.numDocs();
 
     try {
       writer.commit();

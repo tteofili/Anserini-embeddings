@@ -65,13 +65,7 @@ public class FakeWordsIndexAndTest {
         BooleanQuery.setMaxClauseCount(Integer.MAX_VALUE);
         // numSamples
         return Arrays.asList(new Object[][]{
-                {50, 20, false},
-//                {50, 30, false},
-//                {50, 40, false},
-//                {50, 50, false},
-//                {50, 60, false},
-//                {50, 70, false},
-//                {50, 80, false},
+                {10, 20, false},
         });
     }
 
@@ -230,7 +224,7 @@ public class FakeWordsIndexAndTest {
 
     @Override
     public String toString() {
-        return "GloveFakeWordsIndexAndTest{" +
+        return "FakeWordsIndexAndTest{" +
                 "numSamples=" + numSamples +
                 ", q=" + q +
                 ", rerank=" + rerank +
