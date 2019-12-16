@@ -46,6 +46,8 @@ public class VectorNgramsLSHIndexAndTest {
     private static final String TABLE_COLUMN_SEPARATOR = " & ";
     private static final int TOP_N = 10;
 
+    private static final int[] topKs = new int[]{10, 20, 50, 100};
+
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
     private final int decimals;
@@ -57,10 +59,9 @@ public class VectorNgramsLSHIndexAndTest {
     private final int hashCount;
     private final int hashSetSize;
     private final int bucketCount;
-    private final int topK;
 
     public VectorNgramsLSHIndexAndTest(int decimals, int ngramSize, float similarity, float expectedTruePositive, boolean rerank,
-                                       double numSamples, int hashCount, int hashSetSize, int bucketCount, int topK) {
+                                       double numSamples, int hashCount, int hashSetSize, int bucketCount) {
         this.decimals = decimals;
         this.ngramSize = ngramSize;
         this.similarity = similarity;
@@ -70,7 +71,6 @@ public class VectorNgramsLSHIndexAndTest {
         this.hashCount = hashCount;
         this.hashSetSize = hashSetSize;
         this.bucketCount = bucketCount;
-        this.topK = topK;
     }
 
     @Parameterized.Parameters
@@ -78,30 +78,20 @@ public class VectorNgramsLSHIndexAndTest {
         BooleanQuery.setMaxClauseCount(Integer.MAX_VALUE);
         // decimals, ngrams, similarity, expectedTruePositive, rerank, numSamples, hashCount, hashSetSize, bucketCount, topk
         return Arrays.asList(new Object[][]{
-                {1, 2, 1f, 1f, false, 50, 1, 1, 300, 50},
-                {1, 2, 1f, 1f, false, 50, 30, 1, 30, 50},
+                {1, 2, 1f, 1f, false, 10, 1, 1, 300},
+//                {1, 2, 1f, 1f, false, 20, 1, 2, 300, 50},
+//                {1, 2, 1f, 1f, false, 20, 1, 3, 300, 50},
+//                {1, 2, 1f, 1f, false, 20, 2, 2, 300, 50},
+//                {1, 2, 1f, 1f, false, 20, 2, 3, 300, 50},
+//                {1, 2, 1f, 1f, false, 10, 30, 1, 50, 50},
+
+//                {1, 2, 1f, 0.05f, false, 20, 1, 1, 300, 50},
+//                {1, 2, 0.05f, 1f, false, 20, 1, 1, 300, 50},
         });
     }
 
     @Test
     public void testIndexAndSearch() throws Exception {
-        StringBuilder latexTableBuilder = new StringBuilder();
-        latexTableBuilder
-                .append("model").append(TABLE_COLUMN_SEPARATOR)
-                .append("decimals").append(TABLE_COLUMN_SEPARATOR)
-                .append("buckets").append(TABLE_COLUMN_SEPARATOR)
-                .append("hashes").append(TABLE_COLUMN_SEPARATOR)
-                .append("hashSetSize").append(TABLE_COLUMN_SEPARATOR)
-                .append("ngrams").append(TABLE_COLUMN_SEPARATOR)
-                .append("rerank").append(TABLE_COLUMN_SEPARATOR)
-                .append("encodeType").append(TABLE_COLUMN_SEPARATOR)
-                .append("expectedTruePositive").append(TABLE_COLUMN_SEPARATOR)
-                .append("recall@").append(TOP_N).append(TABLE_COLUMN_SEPARATOR)
-                .append("similarity").append(TABLE_COLUMN_SEPARATOR)
-                .append("avg qtime (ms)").append(TABLE_COLUMN_SEPARATOR)
-                .append("index size (MB)")
-                .append(TABLE_ROW_END)
-                .append("\n");
 
         Path path = Paths.get("/Users/teofili/Desktop/tests/ootb-models");
         DirectoryStream<Path> stream = Files.newDirectoryStream(path);
@@ -159,87 +149,79 @@ public class VectorNgramsLSHIndexAndTest {
             IndexSearcher searcher = new IndexSearcher(reader);
 
             StandardAnalyzer standardAnalyzer = new StandardAnalyzer();
-            double recall = 0;
-            double time = 0d;
+            for (int topK : topKs) {
+                double recall = 0;
+                double time = 0d;
 
-            TrecTopicReader trecTopicReader = new TrecTopicReader(Paths.get("src/test/resources/topics.robust04.301-450.601-700.txt"));
-            SortedMap<Integer, Map<String, String>> read = trecTopicReader.read();
-            int queryCount = 0;
-            Collection<Map<String, String>> values = read.values();
-            LOG.info("testing with {} topics", values.size());
-            for (Map<String, String> topic : values) {
-                for (String word : QueryUtils.getTokens(standardAnalyzer, null, topic.get("title"))) {
-                    Set<String> truth = new HashSet<>(wordVectors.wordsNearest(word, TOP_N));
-                    if (!truth.isEmpty() && wordVectors.hasWord(word)) {
-                        try {
-                            double[] vector = wordVectors.getWordVectorMatrixNormalized(word).toDoubleVector();
-                            StringBuilder sb = new StringBuilder();
-                            for (double fv : vector) {
-                                if (sb.length() > 0) {
-                                    sb.append(' ');
+                TrecTopicReader trecTopicReader = new TrecTopicReader(Paths.get("src/test/resources/topics.robust04.301-450.601-700.txt"));
+                SortedMap<Integer, Map<String, String>> read = trecTopicReader.read();
+                int queryCount = 0;
+                Collection<Map<String, String>> values = read.values();
+//            for (float tp = 0.1f; tp <= 1; tp += 0.1f) {
+//                for (float sim = 0.1f; sim <= 1; sim += 0.1f) {
+                LOG.info("testing with {} topics", values.size());
+                for (Map<String, String> topic : values) {
+                    for (String word : QueryUtils.getTokens(standardAnalyzer, null, topic.get("title"))) {
+                        Set<String> truth = new HashSet<>(wordVectors.wordsNearest(word, TOP_N));
+                        if (!truth.isEmpty() && wordVectors.hasWord(word)) {
+                            try {
+                                double[] vector = wordVectors.getWordVectorMatrixNormalized(word).toDoubleVector();
+                                StringBuilder sb = new StringBuilder();
+                                for (double fv : vector) {
+                                    if (sb.length() > 0) {
+                                        sb.append(' ');
+                                    }
+                                    sb.append(fv);
                                 }
-                                sb.append(fv);
-                            }
-//                            Query simQuery = io.anserini.embeddings.nn.QueryUtils.getSimQuery(vectorNgramLshAnalyzer, FIELD_VECTOR, sb.toString(), similarity, expectedTruePositive);
+//                                    Query simQuery = io.anserini.embeddings.nn.QueryUtils.getSimQuery(vectorNgramLshAnalyzer, FIELD_VECTOR, sb.toString(), similarity, expectedTruePositive);
 //                            Query simQuery = QueryUtils.getBooleanQuery(vectorNgramLshAnalyzer, FIELD_VECTOR, sb.toString());
-                            Query simQuery = io.anserini.embeddings.nn.QueryUtils.getCTSimQuery(vectorNgramLshAnalyzer, FIELD_VECTOR, sb.toString(), 0.99f);
-                            TopDocs topDocs;
-                            long start = System.currentTimeMillis();
-                            if (rerank) {
-                                topDocs = searcher.search(simQuery, 2 * topK);
-                                if (topDocs.totalHits > 0) {
-                                    QueryUtils.kNNRerank(TOP_N, false, 100d,
-                                            Collections.singletonList(FIELD_VECTOR), topDocs, searcher);
+                                Query simQuery = io.anserini.embeddings.nn.QueryUtils.getCTSimQuery(vectorNgramLshAnalyzer, FIELD_VECTOR, sb.toString(), 0.96f);
+                                TopDocs topDocs;
+                                long start = System.currentTimeMillis();
+                                if (rerank) {
+                                    topDocs = searcher.search(simQuery, 2 * topK);
+                                    if (topDocs.totalHits > 0) {
+                                        QueryUtils.kNNRerank(TOP_N, false, 100d,
+                                                Collections.singletonList(FIELD_VECTOR), topDocs, searcher);
+                                    }
+                                } else {
+                                    topDocs = searcher.search(simQuery, 1 + topK);
                                 }
-                            } else {
-                                topDocs = searcher.search(simQuery, 1 + topK);
-                            }
-                            time += System.currentTimeMillis() - start;
-                            Set<String> observations = new HashSet<>();
-                            for (ScoreDoc sd : topDocs.scoreDocs) {
-                                Document document = reader.document(sd.doc);
-                                String wordValue = document.get(FIELD_WORD);
-                                if (word.equals(wordValue)) {
-                                    continue;
+                                time += System.currentTimeMillis() - start;
+                                Set<String> observations = new HashSet<>();
+                                for (ScoreDoc sd : topDocs.scoreDocs) {
+                                    Document document = reader.document(sd.doc);
+                                    String wordValue = document.get(FIELD_WORD);
+                                    if (word.equals(wordValue)) {
+                                        continue;
+                                    }
+                                    observations.add(wordValue);
                                 }
-                                observations.add(wordValue);
+                                double intersection = Sets.intersection(truth, observations).size();
+                                double localRecall = intersection / (double) truth.size();
+                                recall += localRecall;
+                                queryCount++;
+                            } catch (IOException e) {
+                                LOG.error("search for word {} failed ({})", word, e);
                             }
-                            double intersection = Sets.intersection(truth, observations).size();
-                            double localRecall = intersection / (double) truth.size();
-                            recall += localRecall;
-                            queryCount++;
-                        } catch (IOException e) {
-                            LOG.error("search for word {} failed ({})", word, e);
                         }
                     }
-                }
-                if (numSamples > 0 && queryCount > numSamples) {
-                    break;
-                }
+                    if (numSamples > 0 && queryCount > numSamples) {
+                        break;
+                    }
 
+                }
+                recall /= queryCount;
+                time /= queryCount;
+
+//                    LOG.info("TP:{}, SIM:{}", tp, sim);
+                LOG.info("R@{}: {}", topK, recall);
+                LOG.info("avg query time: {}ms", time);
+//                }
+//            }
             }
-            recall /= queryCount;
-            time /= queryCount;
             long space = FileUtils.sizeOfDirectory(indexDir.toFile()) / (1024L * 1024L);
-
-            LOG.info("R@{}: {}", topK, recall);
-            LOG.info("avg query time: {}ms", time);
             LOG.info("index size: {}MB", space);
-
-            latexTableBuilder
-                    .append(model).append(TABLE_COLUMN_SEPARATOR)
-                    .append(this.decimals).append(TABLE_COLUMN_SEPARATOR)
-                    .append(this.bucketCount).append(TABLE_COLUMN_SEPARATOR)
-                    .append(this.hashCount).append(TABLE_COLUMN_SEPARATOR)
-                    .append(this.hashSetSize).append(TABLE_COLUMN_SEPARATOR)
-                    .append(this.ngramSize).append(TABLE_COLUMN_SEPARATOR)
-                    .append(this.rerank).append(TABLE_COLUMN_SEPARATOR)
-                    .append(this.similarity).append(TABLE_COLUMN_SEPARATOR)
-                    .append(this.expectedTruePositive).append(TABLE_COLUMN_SEPARATOR)
-                    .append(recall).append('@').append(topK).append(TABLE_COLUMN_SEPARATOR)
-                    .append(time).append(TABLE_COLUMN_SEPARATOR)
-                    .append(space).append(TABLE_ROW_END)
-                    .append("\n");
 
             reader.close();
             indexWriter.close();
@@ -247,7 +229,6 @@ public class VectorNgramsLSHIndexAndTest {
 
             FileUtils.deleteDirectory(indexDir.toFile());
         }
-        IOUtils.write(latexTableBuilder.toString(), new FileOutputStream("target/vnlsh-" + System.currentTimeMillis() + ".txt"), Charset.defaultCharset());
     }
 
     @Override

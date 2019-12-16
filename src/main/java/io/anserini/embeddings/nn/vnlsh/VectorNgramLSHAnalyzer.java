@@ -1,10 +1,7 @@
 package io.anserini.embeddings.nn.vnlsh;
 
 import io.anserini.embeddings.nn.FeatureVectorsTokenizer;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.TokenFilter;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.Tokenizer;
+import org.apache.lucene.analysis.*;
 import org.apache.lucene.analysis.minhash.MinHashFilter;
 import org.apache.lucene.analysis.miscellaneous.RemoveDuplicatesTokenFilter;
 import org.apache.lucene.analysis.shingle.ShingleFilter;

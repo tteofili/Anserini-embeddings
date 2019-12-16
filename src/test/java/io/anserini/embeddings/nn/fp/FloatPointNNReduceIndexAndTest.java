@@ -43,8 +43,9 @@ public class FloatPointNNReduceIndexAndTest {
     private static final String TABLE_ROW_END = "\\\\";
     private static final String TABLE_COLUMN_SEPARATOR = " & ";
     private static final int TOP_N = 10;
-    private static final int TOP_K = 10;
     private static final String FLOAT_POINT = "float_point";
+
+    private static final int[] topKs = new int[]{10, 20, 50, 100};
 
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
@@ -144,72 +145,75 @@ public class FloatPointNNReduceIndexAndTest {
             IndexSearcher searcher = new IndexSearcher(reader);
 
             StandardAnalyzer standardAnalyzer = new StandardAnalyzer();
-            double recall = 0;
-            double time = 0d;
 
-            TrecTopicReader trecTopicReader = new TrecTopicReader(Paths.get("src/test/resources/topics.robust04.301-450.601-700.txt"));
-            SortedMap<Integer, Map<String, String>> read = trecTopicReader.read();
-            int queryCount = 0;
-            Collection<Map<String, String>> values = read.values();
-            LOG.info("testing with {} topics", values.size());
-            for (Map<String, String> topic : values) {
-                for (String word : AnalyzerUtils.tokenize(standardAnalyzer, topic.get("title"))) {
-                    Set<String> truth = new HashSet<>(wordVectors.wordsNearest(word, TOP_N));
-                    if (wordVectors.hasWord(word)) {
-                        try {
-                            TopDocs wordResult = searcher.search(new TermQuery(new Term(FIELD_WORD, word)), 1);
-                            ScoreDoc scoreDoc = wordResult.scoreDocs[0];
+            for (int topK : topKs) {
+                double recall = 0;
+                double time = 0d;
 
-                            byte[] value = reader.document(scoreDoc.doc).getField(FIELD_VECTOR).binaryValue().bytes;
-                            DataInputStream in = new DataInputStream(new ByteArrayInputStream(value));
+                TrecTopicReader trecTopicReader = new TrecTopicReader(Paths.get("src/test/resources/topics.robust04.301-450.601-700.txt"));
+                SortedMap<Integer, Map<String, String>> read = trecTopicReader.read();
+                int queryCount = 0;
+                Collection<Map<String, String>> values = read.values();
+                LOG.info("testing with {} topics", values.size());
+                for (Map<String, String> topic : values) {
+                    for (String word : AnalyzerUtils.tokenize(standardAnalyzer, topic.get("title"))) {
+                        Set<String> truth = new HashSet<>(wordVectors.wordsNearest(word, TOP_N));
+                        if (wordVectors.hasWord(word)) {
+                            try {
+                                TopDocs wordResult = searcher.search(new TermQuery(new Term(FIELD_WORD, word)), 1);
+                                ScoreDoc scoreDoc = wordResult.scoreDocs[0];
 
-                            int l = in.readInt();
-                            float[] vector = new float[l];
-                            for (int n = 0; n < vector.length; n++) {
-                                vector[n] = in.readFloat();
-                            }
-                            TopFieldDocs topDocs;
-                            long start = System.currentTimeMillis();
-                            if (rerank) {
-                                topDocs = FloatPointNearestNeighbor.nearest(searcher, FLOAT_POINT, 2 * TOP_K, vector);
-                                if (topDocs.totalHits > 0) {
-                                    QueryUtils.kNNRerank(1 + TOP_N, false, 100d, Collections.singletonList(FIELD_VECTOR), topDocs, searcher);
+                                byte[] value = reader.document(scoreDoc.doc).getField(FIELD_VECTOR).binaryValue().bytes;
+                                DataInputStream in = new DataInputStream(new ByteArrayInputStream(value));
+
+                                int l = in.readInt();
+                                float[] vector = new float[l];
+                                for (int n = 0; n < vector.length; n++) {
+                                    vector[n] = in.readFloat();
                                 }
-                            } else {
-                                topDocs = FloatPointNearestNeighbor.nearest(searcher, FLOAT_POINT, TOP_K, vector);
-                            }
-                            time += System.currentTimeMillis() - start;
-                            Set<String> observations = new HashSet<>();
-                            for (ScoreDoc sd : topDocs.scoreDocs) {
-                                Document document = reader.document(sd.doc);
-                                String wordValue = document.get(FIELD_WORD);
-                                if (word.equals(wordValue)) {
-                                    continue;
+                                TopFieldDocs topDocs;
+                                long start = System.currentTimeMillis();
+                                if (rerank) {
+                                    topDocs = FloatPointNearestNeighbor.nearest(searcher, FLOAT_POINT, 2 * topK, vector);
+                                    if (topDocs.totalHits > 0) {
+                                        QueryUtils.kNNRerank(1 + TOP_N, false, 100d, Collections.singletonList(FIELD_VECTOR), topDocs, searcher);
+                                    }
+                                } else {
+                                    topDocs = FloatPointNearestNeighbor.nearest(searcher, FLOAT_POINT, topK, vector);
                                 }
-                                observations.add(wordValue);
+                                time += System.currentTimeMillis() - start;
+                                Set<String> observations = new HashSet<>();
+                                for (ScoreDoc sd : topDocs.scoreDocs) {
+                                    Document document = reader.document(sd.doc);
+                                    String wordValue = document.get(FIELD_WORD);
+                                    if (word.equals(wordValue)) {
+                                        continue;
+                                    }
+                                    observations.add(wordValue);
+                                }
+                                double intersection = Sets.intersection(truth, observations).size();
+                                double localRecall = intersection / (double) truth.size();
+                                recall += localRecall;
+                                queryCount++;
+                            } catch (IOException e) {
+                                LOG.error("search for word {} failed ({})", word, e);
                             }
-                            double intersection = Sets.intersection(truth, observations).size();
-                            double localRecall = intersection / (double) truth.size();
-                            recall += localRecall;
-                            queryCount++;
-                        } catch (IOException e) {
-                            LOG.error("search for word {} failed ({})", word, e);
                         }
                     }
+                    if (numSamples > 0 && queryCount > numSamples) {
+                        break;
+                    }
+
                 }
-                if (numSamples > 0 && queryCount > numSamples) {
-                    break;
-                }
+                recall /= queryCount;
+                time /= queryCount;
+                long space = FileUtils.sizeOfDirectory(indexDir.toFile()) / (1024L * 1024L);
+
+                LOG.info("R@{}: {}", topK, recall);
+                LOG.info("avg query time: {}ms", time);
+                LOG.info("index size: {}MB", space);
 
             }
-            recall /= queryCount;
-            time /= queryCount;
-            long space = FileUtils.sizeOfDirectory(indexDir.toFile()) / (1024L * 1024L);
-
-            LOG.info("R@{}: {}", TOP_K, recall);
-            LOG.info("avg query time: {}ms", time);
-            LOG.info("index size: {}MB", space);
-
             reader.close();
             indexWriter.close();
             d.close();

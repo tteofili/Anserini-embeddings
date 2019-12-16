@@ -60,6 +60,9 @@ public class VectorNgramsLSHRunner {
 
         @Option(name = "-bucketCount", metaVar = "[int]", required = true, usage = "bucketCount")
         public int bucketCount;
+
+        @Option(name = "-cutoff", metaVar = "[float]", usage = "cutoff")
+        public float cutoff = 0.999f;
     }
 
     public static void main(String[] args) throws Exception {
@@ -157,7 +160,7 @@ public class VectorNgramsLSHRunner {
                             }
 //                        Query simQuery = io.anserini.embeddings.nn.QueryUtils.getBooleanQuery(vectorNgramLshAnalyzer, FIELD_VECTOR, sb.toString());
                             Query simQuery = io.anserini.embeddings.nn.QueryUtils.getCTSimQuery(vectorNgramLshAnalyzer, FIELD_VECTOR,
-                                    sb.toString(), 0.96f);
+                                    sb.toString(), indexArgs.cutoff);
                             long start = System.currentTimeMillis();
 
                             TopDocs topDocs = searcher.search(simQuery, topK);
